@@ -6,7 +6,7 @@ terraform {
   required_version = "~> 0.13"
 
   backend "s3" {
-    bucket = "tfstate-example-bucket"
+    bucket = var.BACKEND_BUCKET
     key    = "terraform-github-actions.terraform.tfstate"
     region = "ap-northeast-1"
   }
