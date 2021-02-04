@@ -1,0 +1,104 @@
+name: terraform-plan
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+
+jobs:
+  terraform-plan:
+    name: terraform-plan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Check diff
+        id: diff
+        uses: technote-space/get-diff-action@v4.0.5
+        with:
+          PATTERNS: |
+            ./resources/*.tf
+            .github/workflows/*.yml
+
+      - name: Configure aws credentials
+        if: steps.diff.outputs.diff
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+          role-to-assume: ${{ secrets.AWS_ASSUME_ROLE_ARN }}
+          role-duration-seconds: 900
+
+      - name: Setup terraform
+        if: steps.diff.outputs.diff
+        uses: hashicorp/setup-terraform@v1.2.1
+        with:
+          terraform_version: 0.13.6
+
+      - name: Check format
+        id: fmt
+        if: steps.diff.outputs.diff
+        run: |
+          terraform fmt -check -recursive
+        working-directory: ./resources
+        continue-on-error: true
+
+      - name: Terraform Initialize
+        id: init
+        if: steps.diff.outputs.diff
+        run: |
+          terraform init
+        working-directory: ./
+
+      - name: Terraform select Workspace
+        if: steps.diff.outputs.diff
+        run: |
+          case ${{ github.event.pull_request.base.ref }} in
+            "develop" )
+              echo 'terraform apply for dev environment.'
+              terraform workspace select dev
+              ;;
+            "master" )
+              echo 'terraform apply for production environment.'
+              terraform workspace select production
+              ;;
+          esac
+        shell: bash
+        working-directory: ./resources
+
+      - name: Terraform Validate
+        if: steps.diff.outputs.diff
+        run: |
+          terraform validate -no-color
+        working-directory: ./resources
+
+      - name: Terraform Plan
+        if: steps.diff.outputs.diff
+        id: plan
+        run: |
+          terraform plan -no-color
+        working-directory: ./resources
+        continue-on-error: true
+
+      - name: Comment to Github Pull Request
+        if: steps.diff.outputs.diff
+        uses: actions/github-script@v3.0.0
+        env:
+          PLAN_STDOUT: "```terraform\n${{ steps.plan.outputs.stdout }}```"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `## Result: 
+              * **Terraform Format and Style:** \`${{ steps.fmt.outcome }}\`
+              * **Terraform Plan:** \`${{ steps.plan.outcome }}\`
+              <details><summary>terraform plan result:</summary>\n\n${process.env.PLAN_STDOUT}\n\n</details>`;
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
