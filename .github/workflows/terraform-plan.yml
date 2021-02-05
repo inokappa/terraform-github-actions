@@ -21,8 +21,7 @@ jobs:
         uses: technote-space/get-diff-action@v4.0.5
         with:
           PATTERNS: |
-            ./resources/*.tf
-            .github/workflows/*.yml
+            resources/*.tf
 
       - name: Configure aws credentials
         if: steps.diff.outputs.diff
@@ -96,7 +95,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `## Result: 
+            const output = `## Check Result: 
               * **Terraform Format and Style:** \`${{ steps.fmt.outcome }}\`
               * **Terraform Plan:** \`${{ steps.plan.outcome }}\`
               <details><summary>terraform plan result:</summary>\n\n${process.env.PLAN_STDOUT}\n\n</details>`;

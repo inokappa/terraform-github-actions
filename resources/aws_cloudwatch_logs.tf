@@ -5,5 +5,7 @@ resource "aws_cloudwatch_log_group" "terraform-github-actions" {
   tags = {
     Environment = terraform.workspace
     Application = "terraform-github-actions"
+    Test1 = "test1"
+    Test2 = "test2"
   }
 }
