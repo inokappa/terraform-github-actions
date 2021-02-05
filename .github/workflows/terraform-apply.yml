@@ -44,7 +44,10 @@ jobs:
 
       - name: Terraform Apply
         run: |
-          terraform init
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_BACKEND_BACKET }}" \
+            -backend-config="key=${{ secrets.TF_BACKEND_KEY }}" \
+            -backend-config="region=ap-northeast-1"
           case ${{ steps.branch_name.outputs.full_branch }} in
             "develop" )
               echo 'terraform apply for dev environment.'

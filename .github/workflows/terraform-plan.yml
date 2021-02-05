@@ -52,8 +52,11 @@ jobs:
         id: init
         if: steps.diff.outputs.diff
         run: |
-          terraform init
-        working-directory: ./
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_BACKEND_BACKET }}" \
+            -backend-config="key=${{ secrets.TF_BACKEND_KEY }}" \
+            -backend-config="region=ap-northeast-1"
+        working-directory: ./resources
 
       - name: Terraform select Workspace
         if: steps.diff.outputs.diff
